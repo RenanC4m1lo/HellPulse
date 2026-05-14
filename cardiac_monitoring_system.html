@@ -1,0 +1,566 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;500;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ecg: #e24b4a;
+    --ecg-dim: #a32d2d;
+    --bg: #0a0e14;
+    --surface: #111820;
+    --border: #1e2d3d;
+    --text: #c8d8e8;
+    --muted: #5a7a8a;
+    --mono: 'Share Tech Mono', monospace;
+    --ui: 'Syne', sans-serif;
+  }
+  body { background: transparent; font-family: var(--ui); color: var(--text); }
+  .shell {
+    background: var(--bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 0;
+    overflow: hidden;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: #0d1520;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .brand { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--ecg); font-family: var(--mono); }
+  .badge-live {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--ecg-dim);
+    color: #ffa0a0;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.15em;
+    animation: livePulse 1.5s ease-in-out infinite;
+  }
+  @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .topbar-right { display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .time-display { font-size: 13px; color: var(--text); }
+
+  .grid-main {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 0;
+  }
+  .ecg-panel {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .ecg-label { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.1em; margin-bottom: 8px; }
+  .ecg-canvas-wrap {
+    position: relative;
+    height: 100px;
+    background: #080d13;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .ecg-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+  .grid-lines {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(30,45,61,0.7) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,45,61,0.7) 1px, transparent 1px);
+    background-size: 40px 25px;
+  }
+  .sensor-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .sensor-mini {
+    background: #080d13;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .sensor-mini canvas { display: block; width: 100%; }
+  .sensor-mini-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 4px; }
+
+  .vitals-panel {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .vital-card {
+    background: #080d13;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color 0.3s;
+  }
+  .vital-card.alert { border-color: var(--ecg); }
+  .vital-card.warn { border-color: #ba7517; }
+  .vital-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .vital-name { font-size: 10px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.1em; }
+  .vital-status { width: 7px; height: 7px; border-radius: 50%; background: #3B6D11; }
+  .vital-status.alert { background: var(--ecg); animation: livePulse 0.8s ease-in-out infinite; }
+  .vital-status.warn { background: #ef9f27; animation: livePulse 1.2s ease-in-out infinite; }
+  .vital-value { font-family: var(--mono); font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+  .vital-value.alert { color: #ffa0a0; }
+  .vital-value.warn { color: #fac775; }
+  .vital-unit { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .vital-bar-wrap { margin-top: 8px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .vital-bar { height: 100%; border-radius: 2px; transition: width 0.5s, background 0.3s; }
+
+  .bottom-section {
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+  .stat-cell {
+    padding: 14px 18px;
+    border-right: 1px solid var(--border);
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-label { font-size: 10px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.1em; margin-bottom: 4px; }
+  .stat-num { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); }
+  .stat-trend { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .controls {
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: #0d1520;
+    flex-wrap: wrap;
+  }
+  .ctrl-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--ecg); color: var(--text); }
+  .ctrl-btn.active { background: var(--ecg); border-color: var(--ecg); color: #fff; }
+  .ctrl-sep { flex: 1; }
+  .patient-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .patient-chip span { color: var(--text); }
+
+  .scenario-select {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: #080d13;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+  }
+  .scenario-select:focus { border-color: var(--ecg); }
+
+  .alert-banner {
+    background: #300a0a;
+    border-top: 1px solid #5a1a1a;
+    padding: 8px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #ffa0a0;
+    letter-spacing: 0.1em;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .alert-banner.show { display: flex; }
+  .alert-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ecg); animation: livePulse 0.6s infinite; flex-shrink: 0; }
+</style>
+
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="brand">CARDIOVIEW</span>
+      <span class="badge-live">AO VIVO</span>
+    </div>
+    <div class="topbar-right">
+      <span class="time-display" id="clk">--:--:--</span>
+      <span>LEITO 04</span>
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <div class="ecg-panel">
+      <div class="ecg-label">ECG — DII</div>
+      <div class="ecg-canvas-wrap">
+        <div class="grid-lines"></div>
+        <canvas id="ecgMain" height="100"></canvas>
+      </div>
+
+      <div class="sensor-row">
+        <div class="sensor-mini">
+          <div class="sensor-mini-label">SPO2 WAVEFORM</div>
+          <canvas id="cvSpo2" height="44"></canvas>
+        </div>
+        <div class="sensor-mini">
+          <div class="sensor-mini-label">RESP. WAVE</div>
+          <canvas id="cvResp" height="44"></canvas>
+        </div>
+        <div class="sensor-mini">
+          <div class="sensor-mini-label">IBP ARTERIAL</div>
+          <canvas id="cvIbp" height="44"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="vitals-panel">
+      <div class="vital-card" id="vHR">
+        <div class="vital-top">
+          <span class="vital-name">FC  bpm</span>
+          <span class="vital-status" id="vHR-dot"></span>
+        </div>
+        <div class="vital-value" id="vHR-val">--</div>
+        <div class="vital-unit">freq. cardíaca</div>
+        <div class="vital-bar-wrap"><div class="vital-bar" id="vHR-bar" style="width:0%;background:#e24b4a;"></div></div>
+      </div>
+
+      <div class="vital-card" id="vSPO2">
+        <div class="vital-top">
+          <span class="vital-name">SpO2  %</span>
+          <span class="vital-status" id="vSPO2-dot"></span>
+        </div>
+        <div class="vital-value" id="vSPO2-val">--</div>
+        <div class="vital-unit">saturação O₂</div>
+        <div class="vital-bar-wrap"><div class="vital-bar" id="vSPO2-bar" style="width:0%;background:#185fa5;"></div></div>
+      </div>
+
+      <div class="vital-card" id="vNIBP">
+        <div class="vital-top">
+          <span class="vital-name">PANI  mmHg</span>
+          <span class="vital-status" id="vNIBP-dot"></span>
+        </div>
+        <div class="vital-value" id="vNIBP-val" style="font-size:18px;">--/--</div>
+        <div class="vital-unit">pressão arterial</div>
+        <div class="vital-bar-wrap"><div class="vital-bar" id="vNIBP-bar" style="width:0%;background:#0f6e56;"></div></div>
+      </div>
+
+      <div class="vital-card" id="vREsp">
+        <div class="vital-top">
+          <span class="vital-name">FR  rpm</span>
+          <span class="vital-status" id="vREsp-dot"></span>
+        </div>
+        <div class="vital-value" id="vREsp-val">--</div>
+        <div class="vital-unit">freq. respiratória</div>
+        <div class="vital-bar-wrap"><div class="vital-bar" id="vREsp-bar" style="width:0%;background:#3b6d11;"></div></div>
+      </div>
+
+      <div class="vital-card" id="vTemp">
+        <div class="vital-top">
+          <span class="vital-name">TEMP  °C</span>
+          <span class="vital-status" id="vTemp-dot"></span>
+        </div>
+        <div class="vital-value" id="vTemp-val">--</div>
+        <div class="vital-unit">temperatura corp.</div>
+        <div class="vital-bar-wrap"><div class="vital-bar" id="vTemp-bar" style="width:0%;background:#ba7517;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-section">
+    <div class="stat-cell">
+      <div class="stat-label">INTERVALO RR</div>
+      <div class="stat-num" id="sRR">-- ms</div>
+      <div class="stat-trend" id="sRR-t">--</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">ARRITMIAS DET.</div>
+      <div class="stat-num" id="sArritmia">0</div>
+      <div class="stat-trend" id="sArr-t">última hora</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">FC MÉD. (10min)</div>
+      <div class="stat-num" id="sMediaFC">-- bpm</div>
+      <div class="stat-trend" id="sMed-t">--</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select class="scenario-select" id="scenarioSel" onchange="changeScenario(this.value)">
+      <option value="normal">Cenário: Normal</option>
+      <option value="tachycardia">Cenário: Taquicardia</option>
+      <option value="bradycardia">Cenário: Bradicardia</option>
+      <option value="hypo">Cenário: Hipóxia</option>
+      <option value="hypert">Cenário: Hipertensão</option>
+    </select>
+    <button class="ctrl-btn active" id="btnPause" onclick="togglePause()">PAUSAR</button>
+    <button class="ctrl-btn" onclick="resetAlerts()">SILENCIAR ALARME</button>
+    <span class="ctrl-sep"></span>
+    <span class="patient-chip">PACIENTE: <span>JOÃO S., 62a, M</span></span>
+  </div>
+
+  <div class="alert-banner" id="alertBanner">
+    <span class="alert-dot"></span>
+    <span id="alertText">ALERTA</span>
+  </div>
+</div>
+
+<script>
+const scenarios = {
+  normal:      { hr: 72,  spo2: 98, sbp: 120, dbp: 80,  resp: 16, temp: 36.6 },
+  tachycardia: { hr: 138, spo2: 96, sbp: 135, dbp: 88,  resp: 22, temp: 37.2 },
+  bradycardia: { hr: 42,  spo2: 95, sbp: 95,  dbp: 60,  resp: 14, temp: 36.3 },
+  hypo:        { hr: 104, spo2: 87, sbp: 110, dbp: 72,  resp: 26, temp: 37.0 },
+  hypert:      { hr: 88,  spo2: 97, sbp: 178, dbp: 112, resp: 18, temp: 36.8 }
+};
+let current = { ...scenarios.normal };
+let target   = { ...scenarios.normal };
+let paused = false;
+let arrCount = 0;
+let hrHistory = [];
+let alertActive = false;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function changeScenario(k) {
+  target = { ...scenarios[k] };
+  if (k !== 'normal') arrCount += Math.floor(Math.random() * 3);
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('btnPause').textContent = paused ? 'RETOMAR' : 'PAUSAR';
+  document.getElementById('btnPause').classList.toggle('active', !paused);
+}
+
+function resetAlerts() {
+  alertActive = false;
+  document.getElementById('alertBanner').classList.remove('show');
+}
+
+function triggerAlert(msg) {
+  if (alertActive) return;
+  alertActive = true;
+  document.getElementById('alertText').textContent = msg;
+  document.getElementById('alertBanner').classList.add('show');
+}
+
+function setVital(id, val, cls) {
+  const el = document.getElementById(id + '-val');
+  const dot = document.getElementById(id + '-dot');
+  const card = document.getElementById(id);
+  el.textContent = val;
+  el.className = 'vital-value ' + (cls || '');
+  dot.className = 'vital-status ' + (cls || '');
+  if (cls) card.className = 'vital-card ' + cls;
+  else card.className = 'vital-card';
+}
+
+function setBar(id, pct, color) {
+  const b = document.getElementById(id + '-bar');
+  b.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  if (color) b.style.background = color;
+}
+
+function updateVitals() {
+  const hr = Math.round(current.hr);
+  const spo2 = Math.round(current.spo2);
+  const sbp = Math.round(current.sbp);
+  const dbp = Math.round(current.dbp);
+  const resp = Math.round(current.resp);
+  const temp = current.temp.toFixed(1);
+
+  hrHistory.push(hr);
+  if (hrHistory.length > 600) hrHistory.shift();
+
+  let hrCls = '';
+  if (hr > 120 || hr < 50) { hrCls = 'alert'; triggerAlert('FC CRÍTICA: ' + hr + ' bpm — Avaliar imediatamente'); }
+  else if (hr > 100 || hr < 60) hrCls = 'warn';
+  setVital('vHR', hr, hrCls);
+  setBar('vHR', (hr / 200) * 100, hrCls === 'alert' ? '#e24b4a' : hrCls === 'warn' ? '#ef9f27' : '#e24b4a');
+
+  let spoCls = '';
+  if (spo2 < 90) { spoCls = 'alert'; triggerAlert('SpO2 CRÍTICA: ' + spo2 + '% — Risco hipóxia'); }
+  else if (spo2 < 95) spoCls = 'warn';
+  setVital('vSPO2', spo2, spoCls);
+  setBar('vSPO2', spo2, spoCls === 'alert' ? '#e24b4a' : spoCls === 'warn' ? '#ef9f27' : '#185fa5');
+
+  let bpCls = '';
+  if (sbp > 160 || sbp < 90 || dbp > 100) { bpCls = 'alert'; triggerAlert('PA CRÍTICA: ' + sbp + '/' + dbp + ' mmHg'); }
+  else if (sbp > 140 || sbp < 100 || dbp > 90) bpCls = 'warn';
+  setVital('vNIBP', sbp + '/' + dbp, bpCls);
+  setBar('vNIBP', (sbp / 250) * 100, bpCls === 'alert' ? '#e24b4a' : bpCls === 'warn' ? '#ef9f27' : '#0f6e56');
+
+  let rCls = '';
+  if (resp > 25 || resp < 10) rCls = 'alert';
+  else if (resp > 20 || resp < 12) rCls = 'warn';
+  setVital('vREsp', resp, rCls);
+  setBar('vREsp', (resp / 40) * 100, rCls === 'alert' ? '#e24b4a' : rCls === 'warn' ? '#ef9f27' : '#3b6d11');
+
+  let tCls = '';
+  if (current.temp > 38.5 || current.temp < 35.5) tCls = 'alert';
+  else if (current.temp > 37.5 || current.temp < 36.0) tCls = 'warn';
+  setVital('vTemp', temp, tCls);
+  setBar('vTemp', ((current.temp - 34) / 8) * 100, tCls === 'alert' ? '#e24b4a' : tCls === 'warn' ? '#ef9f27' : '#ba7517');
+
+  const rr = Math.round(60000 / hr);
+  document.getElementById('sRR').textContent = rr + ' ms';
+  document.getElementById('sRR-t').textContent = rr < 400 ? '↑ AUMENTADO' : rr > 1200 ? '↓ REDUZIDO' : 'dentro do padrão';
+  document.getElementById('sArritmia').textContent = arrCount;
+  if (hrHistory.length >= 2) {
+    const avg = Math.round(hrHistory.slice(-60).reduce((a,b) => a+b, 0) / Math.min(60, hrHistory.length));
+    document.getElementById('sMediaFC').textContent = avg + ' bpm';
+    const diff = avg - 72;
+    document.getElementById('sMed-t').textContent = (diff > 0 ? '+' : '') + diff + ' vs. basal';
+  }
+}
+
+function clock() {
+  const n = new Date();
+  const pad = v => String(v).padStart(2, '0');
+  document.getElementById('clk').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes()) + ':' + pad(n.getSeconds());
+}
+setInterval(clock, 1000); clock();
+
+class WaveformCanvas {
+  constructor(id, color, amplitude, period, waveType) {
+    this.canvas = document.getElementById(id);
+    this.ctx = this.canvas.getContext('2d');
+    this.color = color;
+    this.amplitude = amplitude;
+    this.period = period;
+    this.waveType = waveType;
+    this.offset = 0;
+    this.pts = [];
+    this.resize();
+  }
+  resize() {
+    this.canvas.width = this.canvas.offsetWidth || this.canvas.parentElement.offsetWidth || 300;
+    this.canvas.height = parseInt(this.canvas.getAttribute('height')) || 100;
+    this.W = this.canvas.width;
+    this.H = this.canvas.height;
+    this.pts = new Array(this.W).fill(this.H / 2);
+  }
+  ecgSample(x) {
+    const t = (x % this.period) / this.period;
+    let y = 0;
+    if (t < 0.08) { y = Math.sin(t / 0.08 * Math.PI) * 0.12; }
+    else if (t < 0.16) { y = -Math.sin((t - 0.08) / 0.08 * Math.PI) * 0.08; }
+    else if (t < 0.2) { y = 0; }
+    else if (t < 0.225) { y = -Math.sin((t - 0.2) / 0.025 * Math.PI) * 0.15; }
+    else if (t < 0.24) { y = Math.sin((t - 0.225) / 0.015 * Math.PI) * 1.0; }
+    else if (t < 0.26) { y = -Math.sin((t - 0.24) / 0.02 * Math.PI) * 0.35; }
+    else if (t < 0.28) { y = Math.sin((t - 0.26) / 0.02 * Math.PI) * 0.18; }
+    else if (t < 0.35) { y = Math.sin((t - 0.28) / 0.07 * Math.PI) * 0.08; }
+    return y;
+  }
+  spoSample(x) {
+    const t = (x % this.period) / this.period;
+    return Math.pow(Math.sin(t * Math.PI), 2) * 0.8;
+  }
+  respSample(x) {
+    return Math.sin(x * 0.06) * 0.7;
+  }
+  ibpSample(x) {
+    const t = (x % this.period) / this.period;
+    if (t < 0.15) return Math.pow(Math.sin(t / 0.15 * Math.PI), 0.5) * 0.9;
+    if (t < 0.35) return 0.9 - (t - 0.15) / 0.2 * 0.25;
+    return 0.65 - (t - 0.35) / 0.65 * 0.35;
+  }
+  draw(speed) {
+    if (!this.canvas.isConnected) return;
+    if (this.canvas.offsetWidth !== this.W) this.resize();
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.W, this.H);
+    const mid = this.H / 2;
+    const amp = mid * this.amplitude;
+    this.offset += speed;
+    this.pts.push(this.offset);
+    const head = Math.floor(this.offset) % this.W;
+    let sample;
+    switch (this.waveType) {
+      case 'ecg': sample = this.ecgSample(this.offset * (this.period / this.W)); break;
+      case 'spo': sample = this.spoSample(this.offset * (this.period / this.W)); break;
+      case 'resp': sample = this.respSample(this.offset); break;
+      case 'ibp': sample = this.ibpSample(this.offset * (this.period / this.W)); break;
+      default: sample = 0;
+    }
+
+    if (!this._buf) this._buf = new Array(this.W).fill(0);
+    this._buf[head] = sample;
+
+    const sweep = 12;
+    ctx.clearRect(head, 0, sweep, this.H);
+    ctx.fillStyle = '#080d13';
+    ctx.fillRect(head, 0, sweep, this.H);
+
+    ctx.beginPath();
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = this.waveType === 'ecg' ? 1.5 : 1.2;
+    ctx.shadowBlur = 0;
+    let first = true;
+    for (let i = 0; i < this.W; i++) {
+      const xi = (head + 1 + i) % this.W;
+      const yi = mid - this._buf[xi] * amp;
+      if (first) { ctx.moveTo(i, yi); first = false; }
+      else ctx.lineTo(i, yi);
+    }
+    ctx.stroke();
+  }
+}
+
+const ecgMain  = new WaveformCanvas('ecgMain',  '#e24b4a', 0.75, 80, 'ecg');
+const cvSpo2   = new WaveformCanvas('cvSpo2',   '#378add', 0.7,  60, 'spo');
+const cvResp   = new WaveformCanvas('cvResp',   '#3b6d11', 0.65, 70, 'resp');
+const cvIbp    = new WaveformCanvas('cvIbp',    '#0f6e56', 0.65, 70, 'ibp');
+
+let tick = 0;
+function loop() {
+  if (!paused) {
+    const t = 0.04;
+    current.hr   = lerp(current.hr,   target.hr,   t);
+    current.spo2 = lerp(current.spo2, target.spo2, t);
+    current.sbp  = lerp(current.sbp,  target.sbp,  t);
+    current.dbp  = lerp(current.dbp,  target.dbp,  t);
+    current.resp = lerp(current.resp, target.resp, t);
+    current.temp = lerp(current.temp, target.temp, t);
+    current.hr += (Math.random() - 0.5) * 0.4;
+    current.spo2 = Math.min(100, Math.max(70, current.spo2 + (Math.random() - 0.5) * 0.1));
+
+    const bpm = current.hr;
+    const mainSpeed = bpm / 60 * 2.2;
+    ecgMain.draw(mainSpeed);
+    cvSpo2.draw(mainSpeed * 0.9);
+    cvResp.draw(current.resp / 60 * 1.5);
+    cvIbp.draw(mainSpeed * 0.95);
+
+    tick++;
+    if (tick % 30 === 0) updateVitals();
+  }
+  requestAnimationFrame(loop);
+}
+
+window.changeScenario = changeScenario;
+window.togglePause = togglePause;
+window.resetAlerts = resetAlerts;
+
+setTimeout(() => {
+  [ecgMain, cvSpo2, cvResp, cvIbp].forEach(w => w.resize());
+  updateVitals();
+  loop();
+}, 100);
+</script>
